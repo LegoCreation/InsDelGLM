@@ -1,7 +1,8 @@
 import random
-import numpy as np
+import pandas as pd
 
 DNA = ["A", "C", "G", "T"]
+
 
 def random_dna(length):
     return "".join(random.choices(DNA, k=length))
@@ -29,6 +30,7 @@ def generate_dataset(
     motif_A = random_dna(random.randint(*motif_len_range))
     motif_B = random_dna(random.randint(*motif_len_range))
 
+    labels = []
     sequences = []
 
     for _ in range(n_samples):
@@ -51,7 +53,7 @@ def generate_dataset(
             if 0 <= pos_B <= max_start:
                 seq = insert_motif(seq, motif_A, pos_A)
                 seq = insert_motif(seq, motif_B, pos_B)
-                labels.append("both")
+                labels.append("both")  # both motifs
             else:
                 place_both = False  # fallback
 
@@ -60,11 +62,28 @@ def generate_dataset(
             motif = random.choice([motif_A, motif_B])
             pos = random.randint(0, seq_len - len(motif))
             seq = insert_motif(seq, motif, pos)
-            labels.append("single")
+            if motif == motif_A:
+                labels.append("A")
+            elif motif == motif_B:
+                labels.append("B")
+            else:
+                labels.append("ERROR")
 
         # Data augmentation
         seq = add_gap_token(seq, gap_prob)
 
         sequences.append(seq)
 
-    return sequences, labels, motif_A, motif_B
+    df = pd.DataFrame({
+        'sequences': sequences,
+        'labels': labels  # only for interpretation, not for training
+    })
+
+    df.to_parquet("./simulated_sequences.parquet", index=False)
+
+    with open("motifs.txt", "w") as f:
+        f.write(f"{motif_A}\n{motif_B}")
+
+
+if __name__ == "__main__":
+    generate_dataset()
