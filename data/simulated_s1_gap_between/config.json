@@ -1,0 +1,17 @@
+{
+  "length": 200,
+  "motif_a": "ATATTCA",
+  "motif_b": "GTACTGC",
+  "spacing_multiple": 10,
+  "k_range": [
+    1,
+    8
+  ],
+  "p_both_valid": 0.5,
+  "p_a_only": 0.25,
+  "p_b_only": 0.25,
+  "gap_rate_between": 0.15,
+  "gap_min": 0,
+  "gap_max": 999999,
+  "seed": 1
+}
