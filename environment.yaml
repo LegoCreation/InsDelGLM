@@ -1,0 +1,9 @@
+name: indel_glm           # Name of the environment
+channels:
+  - conda-forge       # Preferred channel for many packages
+  - defaults
+dependencies:
+  - python=3.11       # Python version
+  - pandas            # Latest compatible version
+  - pyarrow
+  - transformers
