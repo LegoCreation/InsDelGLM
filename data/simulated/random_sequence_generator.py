@@ -19,10 +19,22 @@ def add_gap_token(seq, gap_prob=0.05):
             seq[i] = "-"
     return "".join(seq)
 
+def motif2_positions(seq, n=10):
+    positions = []
+    count = 0
+
+    for i, ch in enumerate(seq):
+        if ch in DNA:
+            count += 1
+            if count % n == 0:
+                positions.append(i+1)
+
+    return positions
+
 
 def generate_dataset(
-    n_samples=1000,
-    seq_len=100,
+    n_samples=5000,
+    seq_len=512,
     motif_len_range=(5, 10),
     gap_prob=0.05
 ):
@@ -35,22 +47,23 @@ def generate_dataset(
 
     for _ in range(n_samples):
         seq = random_dna(seq_len)
+        seq = add_gap_token(seq, gap_prob)
 
         place_both = random.choice([True, False])
 
         if place_both:
             # Valid spacing: multiple of 10
-            max_start = seq_len - max(len(motif_A), len(motif_B))
+            max_start = seq_len - (len(motif_A) + len(motif_B) + 10)
             pos_A = random.randint(0, max_start)
 
-            valid_offsets = [
-                d for d in range(max_start + 1)
-                if d != 0 and abs(d) % 10 == 0
-            ]
+            # possible motif B positions from pos_A on
+            m2_positions = motif2_positions(seq=seq[pos_A+len(motif_A):])
+            if m2_positions:
+                pos_B = pos_A + len(motif_A) + random.choice(m2_positions)
+            else:
+                pos_B = float('inf')
 
-            pos_B = pos_A + random.choice(valid_offsets)
-
-            if 0 <= pos_B <= max_start:
+            if pos_B <= seq_len - len(motif_B):
                 seq = insert_motif(seq, motif_A, pos_A)
                 seq = insert_motif(seq, motif_B, pos_B)
                 labels.append("both")  # both motifs
@@ -69,8 +82,7 @@ def generate_dataset(
             else:
                 labels.append("ERROR")
 
-        # Data augmentation
-        seq = add_gap_token(seq, gap_prob)
+
 
         sequences.append(seq)
 
