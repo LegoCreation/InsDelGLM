@@ -1,4 +1,4 @@
-name: indel_glm           # Name of the environment
+name: insdel_glm           # Name of the environment
 channels:
   - conda-forge       # Preferred channel for many packages
   - defaults
