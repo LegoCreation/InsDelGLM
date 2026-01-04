@@ -33,8 +33,8 @@ def motif2_positions(seq, n=10):
 
 
 def generate_dataset(
-    n_samples=5000,
-    seq_len=512,
+    n_samples=10000,
+    seq_len=40,
     motif_len_range=(5, 10),
     gap_prob=0.05
 ):
