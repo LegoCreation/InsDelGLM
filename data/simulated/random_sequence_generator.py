@@ -36,7 +36,7 @@ def generate_dataset(
     n_samples=100000,
     seq_len=40,
     motif_len_range=(5, 10),
-    gap_prob=0.05
+    gap_prob=0.20
 ):
     # Generate motifs
     motif_A = random_dna(random.randint(*motif_len_range))
