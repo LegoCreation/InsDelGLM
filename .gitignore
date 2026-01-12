@@ -1,7 +1,6 @@
 modules/__pycache__
 /checkpoints/
 notebooks/wandb
-model/
 .DS_Store
 .idea
 helpers/__pycache__
