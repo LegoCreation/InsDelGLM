@@ -4,11 +4,13 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
+import imageio.v2 as imageio
+import io
 
 
 class DNALandscape:
     """
-    Visualization tool for DNA-BERT.
+    Visualization tool for DNA-BERT with GIF support.
     """
 
     def __init__(self, model, tokenizer, seq_len=40):
@@ -25,9 +27,93 @@ class DNALandscape:
             'T': 'red', '-': 'purple'
         }
 
+    def _compute_landscape(self, sequences):
+        """
+        Helper: Takes a list of sequences, runs the masked inference loop,
+        and returns the probability matrix.
+        """
+        encoded = self.tokenizer(sequences, return_tensors="pt", padding="max_length", max_length=self.seq_len)
+        input_ids = encoded["input_ids"].to(self.device)
+        attention_mask = encoded["attention_mask"].to(self.device)
+
+        landscape_probs = np.zeros((self.seq_len, 5))
+
+        # Inference Loop
+        for col_idx in range(self.seq_len):
+            target_tensor_col = col_idx + 1
+            if target_tensor_col >= input_ids.shape[1]: break
+
+            masked_input = input_ids.clone()
+            masked_input[:, target_tensor_col] = self.tokenizer.mask_token_id
+
+            with torch.no_grad():
+                outputs = self.model(masked_input, attention_mask=attention_mask, return_dict=True)
+                probs = F.softmax(outputs.logits[:, target_tensor_col, :], dim=-1)
+
+            landscape_probs[col_idx] = probs[:, self.dna_ids].cpu().numpy().mean(axis=0)
+
+        return landscape_probs
+
+    def generate_aggregated_gif(self, df_enriched, motif_name, motif_seq, filename=None, min_samples=10, fps=2):
+        """
+        Generates a GIF showing the landscape changes as the motif moves across positions.
+        """
+        if filename is None:
+            filename = f"{motif_name}_landscape.gif"
+
+        start_col = f"{motif_name}_start"
+        if start_col not in df_enriched.columns:
+            print(f"Error: Column '{start_col}' missing.")
+            return
+
+        position_counts = df_enriched[start_col].value_counts().sort_index()
+        valid_starts = [pos for pos in position_counts.index if pos != -1 and position_counts[pos] >= min_samples]
+
+        if not valid_starts:
+            print("No positions met the minimum sample criteria.")
+            return
+
+        print(f"--- Generating GIF for {motif_name} ({len(valid_starts)} frames) ---")
+
+        frames = []
+
+        for start_pos in valid_starts:
+            count = position_counts[start_pos]
+            print(f"Rendering Frame: Start Index {start_pos} (N={count})...")
+
+            # 1. Get sequences
+            subset = df_enriched[df_enriched[start_col] == start_pos]
+            sequences = subset['sequences'].tolist()
+
+            # 2. Compute Landscape (Using Helper)
+            landscape_probs = self._compute_landscape(sequences)
+
+            title_str = f"Aggregated: {motif_name} ('{motif_seq}') | Index {start_pos} | N={count}"
+
+            # 3. Capture Plot
+            fig = self._render_logo(
+                landscape_probs,
+                title=title_str,
+                vline_start=start_pos,
+                motif_len=len(motif_seq),
+                show=False
+            )
+
+            # 4. Save to RAM buffer
+            buf = io.BytesIO()
+            fig.savefig(buf, format='png', dpi=100)
+            buf.seek(0)
+            frames.append(imageio.imread(buf, format='png'))
+            buf.close()
+            plt.close(fig)
+
+        print(f"Saving GIF to {filename}...")
+        imageio.mimsave(filename, frames, fps=fps, loop=0)
+        print("Done!")
+
     def plot_aggregated(self, df_enriched, motif_name, motif_seq, min_samples=50):
         """
-        Method 1: Aggregates sequences by motif start position.
+        Generates static plots (restored functionality).
         """
         self.model.eval()
 
@@ -51,24 +137,8 @@ class DNALandscape:
             subset = df_enriched[df_enriched[start_col] == start_pos]
             sequences = subset['sequences'].tolist()
 
-            encoded = self.tokenizer(sequences, return_tensors="pt", padding="max_length", max_length=self.seq_len)
-            input_ids = encoded["input_ids"].to(self.device)
-            attention_mask = encoded["attention_mask"].to(self.device)
-
-            landscape_probs = np.zeros((self.seq_len, 5))
-
-            for col_idx in range(self.seq_len):
-                target_tensor_col = col_idx + 1
-                if target_tensor_col >= input_ids.shape[1]: break
-
-                masked_input = input_ids.clone()
-                masked_input[:, target_tensor_col] = self.tokenizer.mask_token_id
-
-                with torch.no_grad():
-                    outputs = self.model(masked_input, attention_mask=attention_mask, return_dict=True)
-                    probs = F.softmax(outputs.logits[:, target_tensor_col, :], dim=-1)
-
-                landscape_probs[col_idx] = probs[:, self.dna_ids].cpu().numpy().mean(axis=0)
+            # Use Helper Here Too!
+            landscape_probs = self._compute_landscape(sequences)
 
             title_str = f"Aggregated: {motif_name} ('{motif_seq}') | Index {start_pos} | N={count}"
 
@@ -76,8 +146,44 @@ class DNALandscape:
                 landscape_probs,
                 title=title_str,
                 vline_start=start_pos,
-                motif_len=len(motif_seq)
+                motif_len=len(motif_seq),
+                show=True
             )
+
+    def _render_logo(self, probs_matrix, title, vline_start=None, motif_len=0, seq_letters=None, show=True):
+        df_logo = pd.DataFrame(probs_matrix, columns=self.vocab_order)
+
+        fig, ax = plt.subplots(figsize=(12, 3))
+        logo = logomaker.Logo(df_logo,
+                              color_scheme=self.colors,
+                              shade_below=.5,
+                              fade_below=.5,
+                              font_name='Arial Rounded MT Bold',
+                              ax=ax)
+
+        if vline_start is not None:
+            logo.ax.axvline(x=vline_start - 0.5, color='black', linewidth=1.5, linestyle="--")
+            logo.ax.axvline(x=vline_start + motif_len - 0.5, color='black', linewidth=1.5, linestyle="--")
+
+        if seq_letters:
+            ax2 = logo.ax.twiny()
+            ax2.set_xlim(logo.ax.get_xlim())
+            ax2.set_xticks(range(len(seq_letters)))
+            ax2.set_xticklabels(seq_letters, fontsize=8)
+            ax2.tick_params(length=0)
+
+        logo.ax.set_xticks(range(0, len(probs_matrix), 5))
+        logo.ax.set_ylim([0, 1])  # Fix Y-axis for smooth animation
+
+        logo.ax.set_title(title, y=1.1 if seq_letters else 1.0)
+        logo.ax.set_ylabel("Confidence")
+        logo.ax.set_xlabel("Position ID")
+
+        if show:
+            plt.show()
+            return None
+        else:
+            return fig
 
     def plot_single(self, df, target_id, motif_seq=None):
         """
@@ -142,27 +248,3 @@ class DNALandscape:
             seq_letters=list(sequence)
         )
 
-    def _render_logo(self, probs_matrix, title, vline_start=None, motif_len=0, seq_letters=None):
-        df_logo = pd.DataFrame(probs_matrix, columns=self.vocab_order)
-
-        plt.figure(figsize=(12, 3))
-        logo = logomaker.Logo(df_logo, color_scheme=self.colors, shade_below=.5, fade_below=.5,
-                              font_name='Arial Rounded MT Bold')
-
-        if vline_start is not None:
-            logo.ax.axvline(x=vline_start - 0.5, color='black')
-            logo.ax.axvline(x=vline_start + motif_len - 0.5, color='black')
-
-        if seq_letters:
-            ax2 = logo.ax.twiny()
-            ax2.set_xlim(logo.ax.get_xlim())
-            ax2.set_xticks(range(len(seq_letters)))
-            ax2.set_xticklabels(seq_letters, fontsize=8)
-            ax2.tick_params(length=0)
-
-        logo.ax.set_xticks(range(0, len(probs_matrix), 5))
-
-        logo.ax.set_title(title, y=1.1 if seq_letters else 1.0)
-        logo.ax.set_ylabel("Confidence")
-        logo.ax.set_xlabel("Position ID")
-        plt.show()
