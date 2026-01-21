@@ -4,9 +4,12 @@ import os
 
 
 class DNATokenizer(PreTrainedTokenizer):
-    def __init__(self, vocab=None, **kwargs):
+    def __init__(self, vocab=None, deletion_token=True, **kwargs):
         if vocab is None:
-            vocab = ["A", "T", "C", "G", "-", "[PAD]", "[MASK]", "[CLS]", "[SEP]"]
+            if deletion_token:
+                vocab = ["A", "T", "C", "G", "-", "[PAD]", "[MASK]", "[CLS]", "[SEP]"]
+            else:
+                vocab = ["A", "T", "C", "G", "[PAD]", "[MASK]", "[CLS]", "[SEP]"]
         self.vocab = vocab
         self.tokens_to_ids = {tok: i for i, tok in enumerate(vocab)}
         self.ids_to_tokens = {i: tok for i, tok in enumerate(vocab)}
