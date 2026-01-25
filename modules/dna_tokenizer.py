@@ -13,10 +13,13 @@ class DNATokenizer(PreTrainedTokenizer):
         self.vocab = vocab
         self.tokens_to_ids = {tok: i for i, tok in enumerate(vocab)}
         self.ids_to_tokens = {i: tok for i, tok in enumerate(vocab)}
-        self.cls_token = "[CLS]"
-        self.sep_token = "[SEP]"
-        self.pad_token = "[PAD]"
-        self.mask_token = "[MASK]"
+        
+        # Pass special tokens to parent class to ensure they are registered correctly
+        kwargs["cls_token"] = kwargs.get("cls_token", "[CLS]")
+        kwargs["sep_token"] = kwargs.get("sep_token", "[SEP]")
+        kwargs["pad_token"] = kwargs.get("pad_token", "[PAD]")
+        kwargs["mask_token"] = kwargs.get("mask_token", "[MASK]")
+        
         super().__init__(**kwargs)
 
     @property
@@ -51,7 +54,7 @@ class DNATokenizer(PreTrainedTokenizer):
     def _convert_id_to_token(self, index):
         return self.ids_to_tokens.get(index)
 
-    def __call__(self, sequences, max_length=512, padding="max_length", return_tensors="pt"):
+    def __call__(self, sequences, max_length=512, padding="max_length", truncation=None, return_tensors="pt", **kwargs):
         if isinstance(sequences, str):
             sequences = [sequences]
     

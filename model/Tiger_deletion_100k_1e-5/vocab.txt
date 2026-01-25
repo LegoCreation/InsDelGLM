@@ -1,0 +1,9 @@
+A
+T
+C
+G
+-
+[PAD]
+[MASK]
+[CLS]
+[SEP]

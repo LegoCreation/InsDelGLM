@@ -81,13 +81,16 @@ class DNABertForMaskedLM(BertPreTrainedModel):
         
         loss = None
         if labels is not None:
-                    # Standard CrossEntropyLoss ignores -100 by default (used for unmasked tokens)
-                    loss_fct = nn.CrossEntropyLoss()
-                    # Flatten logits and labels for loss calculation
-                    loss = loss_fct(
-                        prediction_scores.view(-1, self.config.vocab_size),
-                        labels.view(-1)
-                    )
+            # Standard CrossEntropyLoss ignores -100 by default (used for unmasked tokens)
+            # Use label smoothing if specified in config, else default to 0.0
+            label_smoothing = getattr(self.config, "label_smoothing", 0.0)
+            loss_fct = nn.CrossEntropyLoss(label_smoothing=label_smoothing)
+            
+            # Flatten logits and labels for loss calculation
+            loss = loss_fct(
+                prediction_scores.view(-1, self.config.vocab_size),
+                labels.view(-1)
+            )
 
         if not return_dict:
             output = (prediction_scores,) + outputs[2:]

@@ -5,7 +5,7 @@ import random
 # change this to the file locations of your data which need adaption
 data_files = ["train.parquet", "val.parquet", "test.parquet"]
 # known motifs
-motifs = ["TGAAC", "TACAGAT"]
+motifs = ["CGTAGGTC", "GTAACGCTCC"]
 
 pattern = re.compile(
     rf"{motifs[0]}((?:(?:-*[ACGT]-*){{10}})+){motifs[1]}"
