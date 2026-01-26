@@ -13,14 +13,17 @@ class DNALandscape:
     Visualization tool for DNA-BERT with GIF support.
     """
 
-    def __init__(self, model, tokenizer, seq_len=40):
+    def __init__(self, model, tokenizer, seq_len=40, font="Arial Rounded MT Bold"):
         self.model = model
         self.tokenizer = tokenizer
         self.seq_len = seq_len
         self.device = next(model.parameters()).device
+        self.font = font
 
         # Config
-        self.vocab_order = ["A", "C", "G", "T", "-"]
+        self.vocab_order = ["A", "C", "G", "T"]
+        if "-" in self.tokenizer.get_vocab():
+            self.vocab_order.append("-")
         self.dna_ids = [self.tokenizer.tokens_to_ids[n] for n in self.vocab_order]
         self.colors = {
             'A': 'green', 'C': 'blue', 'G': 'orange',
@@ -36,7 +39,8 @@ class DNALandscape:
         input_ids = encoded["input_ids"].to(self.device)
         attention_mask = encoded["attention_mask"].to(self.device)
 
-        landscape_probs = np.zeros((self.seq_len, 5))
+        #landscape_probs = np.zeros((self.seq_len, 5))
+        landscape_probs = np.zeros((self.seq_len, len(self.vocab_order)))
 
         # Inference Loop
         for col_idx in range(self.seq_len):
@@ -158,7 +162,7 @@ class DNALandscape:
                               color_scheme=self.colors,
                               shade_below=.5,
                               fade_below=.5,
-                              font_name='Arial Rounded MT Bold',
+                              font_name=self.font,
                               ax=ax)
 
         if vline_start is not None:
@@ -222,7 +226,8 @@ class DNALandscape:
         input_ids = encoded["input_ids"].to(self.device)
         attention_mask = encoded["attention_mask"].to(self.device)
 
-        landscape_probs = np.zeros((self.seq_len, 5))
+        #landscape_probs = np.zeros((self.seq_len, 5))
+        landscape_probs = np.zeros((self.seq_len, len(self.vocab_order)))
 
         # 3. Scan
         for col_idx in range(self.seq_len):

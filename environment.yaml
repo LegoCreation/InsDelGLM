@@ -7,3 +7,8 @@ dependencies:
   - pandas            # Latest compatible version
   - pyarrow
   - transformers
+  - pytorch
+  - logomaker
+  - imageio
+  - seaborn
+  - scikit-learn
