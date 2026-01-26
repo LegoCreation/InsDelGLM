@@ -13,12 +13,13 @@ class DNALandscape:
     Visualization tool for DNA-BERT with GIF support.
     """
 
-    def __init__(self, model, tokenizer, seq_len=40, font="Arial Rounded MT Bold"):
+    def __init__(self, model, tokenizer, seq_len=40, font="Arial Rounded MT Bold", use_ic=False):
         self.model = model
         self.tokenizer = tokenizer
         self.seq_len = seq_len
         self.device = next(model.parameters()).device
         self.font = font
+        self.use_ic = use_ic
 
         # Config
         self.vocab_order = ["A", "C", "G", "T"]
@@ -154,15 +155,31 @@ class DNALandscape:
                 show=True
             )
 
-    def _render_logo(self, probs_matrix, title, vline_start=None, motif_len=0, seq_letters=None, show=True):
+    def _render_logo(self, probs_matrix, title, vline_start=None, motif_len=0,
+                     seq_letters=None, show=True):
         df_logo = pd.DataFrame(probs_matrix, columns=self.vocab_order)
+
+        # Add information content scaling (use class setting)
+        if self.use_ic:
+            # Calculate entropy for each position
+            entropy = -np.sum(df_logo * np.log2(df_logo + 1e-9), axis=1)
+            max_entropy = np.log2(len(self.vocab_order))  # log2(5) for ACGT-
+            information_content = max_entropy - entropy
+
+            # Scale probabilities by IC
+            df_logo = df_logo.mul(information_content, axis=0)
+            ylabel = "Information Content (bits)"
+            ylim = [0, max_entropy]
+        else:
+            ylabel = "Confidence"
+            ylim = [0, 1]
 
         fig, ax = plt.subplots(figsize=(12, 3))
         logo = logomaker.Logo(df_logo,
                               color_scheme=self.colors,
                               shade_below=.5,
                               fade_below=.5,
-                              font_name=self.font,
+                              font_name='Arial Rounded MT Bold',
                               ax=ax)
 
         if vline_start is not None:
@@ -177,10 +194,9 @@ class DNALandscape:
             ax2.tick_params(length=0)
 
         logo.ax.set_xticks(range(0, len(probs_matrix), 5))
-        logo.ax.set_ylim([0, 1])  # Fix Y-axis for smooth animation
-
+        logo.ax.set_ylim(ylim)
+        logo.ax.set_ylabel(ylabel)
         logo.ax.set_title(title, y=1.1 if seq_letters else 1.0)
-        logo.ax.set_ylabel("Confidence")
         logo.ax.set_xlabel("Position ID")
 
         if show:
