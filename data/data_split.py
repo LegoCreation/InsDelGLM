@@ -4,7 +4,7 @@ import os
 
 
 def split_dataset(
-        input_file="./simulated/simulated_sequences.parquet",
+        input_file="./simulated/baseline_sequences.parquet",
         output_dir="./simulated",
         seed=42
 ):
@@ -45,9 +45,9 @@ def split_dataset(
 
     # Save the files
     print(f"\nSaving files to {output_dir}...")
-    df_train.to_parquet(os.path.join(output_dir, "train.parquet"))
-    df_val.to_parquet(os.path.join(output_dir, "val.parquet"))
-    df_test.to_parquet(os.path.join(output_dir, "test.parquet"))
+    df_train.to_parquet(os.path.join(output_dir, "baseline_train.parquet"))
+    df_val.to_parquet(os.path.join(output_dir, "baseline_val.parquet"))
+    df_test.to_parquet(os.path.join(output_dir, "baseline_test.parquet"))
 
     print("Done!")
 
