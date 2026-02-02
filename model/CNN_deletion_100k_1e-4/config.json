@@ -1,0 +1,18 @@
+{
+  "architectures": [
+    "DNACNNForMaskedLM"
+  ],
+  "cls_token_id": 7,
+  "dropout_prob": 0.1,
+  "dtype": "float32",
+  "hidden_size": 32,
+  "kernel_size": 7,
+  "label_smoothing": 0.0,
+  "mask_token_id": 6,
+  "max_length": 512,
+  "num_conv_layers": 8,
+  "pad_token_id": 5,
+  "sep_token_id": 8,
+  "transformers_version": "4.57.3",
+  "vocab_size": 9
+}
