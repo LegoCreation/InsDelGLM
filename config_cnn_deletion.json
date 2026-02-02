@@ -1,0 +1,10 @@
+{
+  "model_type": "masked_cnn",
+  "vocab_size": 9,
+  "hidden_size": 32,
+  "num_conv_layers": 8,
+  "kernel_size": 7,
+  "dropout_prob": 0.1,
+  "max_length": 512,
+  "label_smoothing": 0.0
+}
