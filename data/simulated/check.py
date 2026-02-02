@@ -8,7 +8,7 @@ import re
 BASELINE_FILE = "baseline_sequences.parquet"
 DELETION_FILE = "deletion_sequences.parquet"
 MOTIF_FILE = "motifs.txt"
-DISTANCE_UNIT = 10
+DISTANCE_UNIT = 6 #10
 
 DNA = set("ACGT")
 DNA_GAP = set("ACGT-")

@@ -40,40 +40,49 @@ def generate_baseline_sequence(
     motif_B: str,
     distance_unit: int
 ):
-    core = random_dna(base_len)
-    label = random.choice(["none", "A", "B", "both"])
+    # Pick label ONCE with weights
+    label = random.choices(["none", "A", "B", "both"], weights=[0.15, 0.25, 0.25, 0.35], k=1)[0]
 
-    A_start = A_end = B_start = B_end = None
+    # Keep retrying until we successfully generate the chosen label
+    max_attempts = 10
+    for attempt in range(max_attempts):
+        core = random_dna(base_len)
+        A_start = A_end = B_start = B_end = None
+        success = True
 
-    if label == "A":
-        pos = random.randint(0, base_len - len(motif_A))
-        core = insert_motif(core, motif_A, pos)
-        A_start, A_end = pos, pos + len(motif_A)
+        if label == "A":
+            pos = random.randint(0, base_len - len(motif_A))
+            core = insert_motif(core, motif_A, pos)
+            A_start, A_end = pos, pos + len(motif_A)
 
-    elif label == "B":
-        pos = random.randint(0, base_len - len(motif_B))
-        core = insert_motif(core, motif_B, pos)
-        B_start, B_end = pos, pos + len(motif_B)
+        elif label == "B":
+            pos = random.randint(0, base_len - len(motif_B))
+            core = insert_motif(core, motif_B, pos)
+            B_start, B_end = pos, pos + len(motif_B)
 
-    elif label == "both":
-        max_start = base_len - (len(motif_A) + len(motif_B) + distance_unit)
-        if max_start > 0:
-            pos_A = random.randint(0, max_start)
-            suffix = core[pos_A + len(motif_A):]
-            offsets = motif2_positions(suffix, distance_unit)
-            if offsets:
-                pos_B = pos_A + len(motif_A) + random.choice(offsets)
-                if pos_B <= base_len - len(motif_B):
-                    core = insert_motif(core, motif_A, pos_A)
-                    core = insert_motif(core, motif_B, pos_B)
-                    A_start, A_end = pos_A, pos_A + len(motif_A)
-                    B_start, B_end = pos_B, pos_B + len(motif_B)
+        elif label == "both":
+            max_start = base_len - (len(motif_A) + len(motif_B) + distance_unit)
+            if max_start > 0:
+                pos_A = random.randint(0, max_start)
+                suffix = core[pos_A + len(motif_A):]
+                offsets = motif2_positions(suffix, distance_unit)
+                if offsets:
+                    pos_B = pos_A + len(motif_A) + random.choice(offsets)
+                    if pos_B <= base_len - len(motif_B):
+                        core = insert_motif(core, motif_A, pos_A)
+                        core = insert_motif(core, motif_B, pos_B)
+                        A_start, A_end = pos_A, pos_A + len(motif_A)
+                        B_start, B_end = pos_B, pos_B + len(motif_B)
+                    else:
+                        success = False
                 else:
-                    label = "none"
+                    success = False
             else:
-                label = "none"
-        else:
-            label = "none"
+                success = False
+
+        # If we successfully generated the sequence, break out of retry loop
+        if success:
+            break
 
     seq = random_dna(flank_len) + core + random_dna(flank_len)
 
@@ -200,10 +209,10 @@ def generate_deletion_sequence(row, deletion_prob):
 
 def generate_datasets(
     n_samples: int = 100_000,
-    base_len: int = 100,
-    flank_len: int = 20,
-    motif_len_range: Tuple[int, int] = (5, 10),
-    distance_unit: int = 10,
+    base_len: int = 25,
+    flank_len: int = 5,
+    motif_len_range: Tuple[int, int] = (4, 5),
+    distance_unit: int = 6,
     deletion_prob: float = 0.15,
     out_prefix: str = "sequences"
 ):
